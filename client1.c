@@ -1,41 +1,64 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>    /* Internet domain header */
-#include <netdb.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
+#include <netdb.h> 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h> 
+#include <sys/socket.h> 
+#define MAX 80 
+#define PORT 8080 
+#define SA struct sockaddr 
+void func(int sockfd) 
+{ 
+	char buff[MAX]; 
+	int n; 
+	for (;;) { 
+		bzero(buff, sizeof(buff)); 
+		printf("Enter the string : "); 
+		n = 0; 
+		while ((buff[n++] = getchar()) != '\n') 
+			; 
+		write(sockfd, buff, sizeof(buff)); 
+		bzero(buff, sizeof(buff)); 
+		read(sockfd, buff, sizeof(buff)); 
+		printf("From Server : %s", buff); 
+		if ((strncmp(buff, "exit", 4)) == 0) { 
+			printf("Client Exit...\n"); 
+			break; 
+		} 
+	} 
+} 
 
-int main() {
-    // create socket
-    int soc = socket(AF_INET, SOCK_STREAM, 0);
-    if (soc == -1) {
-        perror("client: socket");
-        exit(1);
-    }
+int main() 
+{ 
+	int sockfd, connfd; 
+	struct sockaddr_in servaddr, cli; 
 
-    //initialize server address    
-    struct sockaddr_in server;
-    server.sin_family = AF_INET;
-    server.sin_port = htons(54321);  
-    memset(&server.sin_zero, 0, 8);
-    
-    struct addrinfo *ai;
-    char * hostname = "teach.cs.toronto.edu";
+	// socket create and varification 
+	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+	if (sockfd == -1) { 
+		printf("socket creation failed...\n"); 
+		exit(0); 
+	} 
+	else
+		printf("Socket successfully created..\n"); 
+	bzero(&servaddr, sizeof(servaddr)); 
 
-    /* this call declares memory and populates ailist */
-    getaddrinfo(hostname, NULL, NULL, &ai);
-    /* we only make use of the first element in the list */
-    server.sin_addr = ((struct sockaddr_in *) ai->ai_addr)->sin_addr;
+	// assign IP, PORT 
+	servaddr.sin_family = AF_INET; 
+	servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
+	servaddr.sin_port = htons(PORT); 
 
-    // free the memory that was allocated by getaddrinfo for this list
-    freeaddrinfo(ai);
+	// connect the client socket to server socket 
+	if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
+		printf("connection with the server failed...\n"); 
+		exit(0); 
+	} 
+	else
+		printf("connected to the server..\n"); 
 
-    int ret = connect(soc, (struct sockaddr *)&server, sizeof(struct sockaddr_in));
+	// function for chat 
+	func(sockfd); 
 
-    printf("Connect returned %d\n", ret);
-    return 0;
-}
+	// close the socket 
+	close(sockfd); 
+} 
 
